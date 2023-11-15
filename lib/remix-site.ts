@@ -120,7 +120,7 @@ export class RemixSite extends Construct {
       this,
       "RequestHandlerPolicy",
       {
-        originRequestPolicyName: "website-request-handler",
+        originRequestPolicyName: "request-handler-policy",
         queryStringBehavior: OriginRequestQueryStringBehavior.all(),
         cookieBehavior: OriginRequestCookieBehavior.all(),
         headerBehavior: OriginRequestHeaderBehavior.none(),
