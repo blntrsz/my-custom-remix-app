@@ -14,7 +14,7 @@ export const headers = {
 
 export function loader() {
   return json({
-    message: "Hello from loader",
+    message: "Hello from loader v2",
   });
 }
 
