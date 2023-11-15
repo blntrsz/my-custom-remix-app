@@ -14,10 +14,14 @@ export class PipelineStack extends cdk.Stack {
     const pipeline = new CodePipeline(this, "code-pipeline", {
       pipelineName: "pipeline",
       synth: new ShellStep("synth", {
-        input: CodePipelineSource.connection("blntrsz/cdk-platform", "main", {
-          connectionArn:
-            "arn:aws:codestar-connections:eu-central-1:155601209279:connection/51dc3226-ffdd-459d-a034-50f9ff503d2b",
-        }),
+        input: CodePipelineSource.connection(
+          "blntrsz/my-custom-remix-app",
+          "main",
+          {
+            connectionArn:
+              "arn:aws:codestar-connections:eu-central-1:155601209279:connection/51dc3226-ffdd-459d-a034-50f9ff503d2b",
+          }
+        ),
         commands: ["npm ci", "npm run build", "npx cdk synth"],
       }),
     });
