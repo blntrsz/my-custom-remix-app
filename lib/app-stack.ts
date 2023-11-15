@@ -8,7 +8,7 @@ export class AppStack extends Stack {
     super(scope, id, props);
 
     new RemixSite(this, "site", {
-      buildCommand: "pnpm run build",
+      buildCommand: "npm run build",
       path: "./",
     });
   }
