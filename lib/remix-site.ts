@@ -63,14 +63,6 @@ export class RemixSite extends Construct {
       },
     });
 
-    const bucket = new Bucket(this, "StaticAssetsBucket");
-
-    new BucketDeployment(this, "DeployStaticAssets", {
-      sources: [bundle],
-      destinationBucket: bucket,
-      destinationKeyPrefix: "_static",
-    });
-
     const fn = new NodejsFunction(this, "RequestHandler", {
       runtime: Runtime.NODEJS_18_X,
       handler: "handler",
@@ -85,9 +77,6 @@ export class RemixSite extends Construct {
       logRetention: RetentionDays.THREE_DAYS,
       tracing: Tracing.ACTIVE,
     });
-
-    new CanaryDeployment(this, "canary", { lambda: fn });
-
     const integration = new HttpLambdaIntegration(
       "RequestHandlerIntegration",
       fn,
@@ -95,7 +84,6 @@ export class RemixSite extends Construct {
         payloadFormatVersion: PayloadFormatVersion.VERSION_2_0,
       }
     );
-
     const httpApi = new HttpApi(this, "WebsiteApi", {
       defaultIntegration: integration,
     });
@@ -103,6 +91,17 @@ export class RemixSite extends Construct {
     const httpApiUrl = `${httpApi.httpApiId}.execute-api.${
       Stack.of(this).region
     }.${Stack.of(this).urlSuffix}`;
+    const requestHandlerOrigin = new HttpOrigin(httpApiUrl);
+    const originRequestPolicy = new OriginRequestPolicy(
+      this,
+      "RequestHandlerPolicy",
+      {
+        originRequestPolicyName: "request-handler-policy",
+        queryStringBehavior: OriginRequestQueryStringBehavior.all(),
+        cookieBehavior: OriginRequestCookieBehavior.all(),
+        headerBehavior: OriginRequestHeaderBehavior.none(),
+      }
+    );
 
     const serverCachePolicy = new CachePolicy(this, "ServerCache", {
       queryStringBehavior: CacheQueryStringBehavior.all(),
@@ -115,29 +114,12 @@ export class RemixSite extends Construct {
       enableAcceptEncodingGzip: true,
     });
 
-    const requestHandlerOrigin = new HttpOrigin(httpApiUrl);
-    const originRequestPolicy = new OriginRequestPolicy(
-      this,
-      "RequestHandlerPolicy",
-      {
-        originRequestPolicyName: "request-handler-policy",
-        queryStringBehavior: OriginRequestQueryStringBehavior.all(),
-        cookieBehavior: OriginRequestCookieBehavior.all(),
-        headerBehavior: OriginRequestHeaderBehavior.none(),
-      }
-    );
     const requestHandlerBehavior: AddBehaviorOptions = {
       allowedMethods: AllowedMethods.ALLOW_ALL,
       viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       cachePolicy: serverCachePolicy,
       originRequestPolicy,
     };
-
-    const assetOrigin = new S3Origin(bucket);
-    const assetBehaviorOptions = {
-      viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-    };
-
     const distribution = new Distribution(this, "CloudFront", {
       defaultBehavior: {
         origin: requestHandlerOrigin,
@@ -145,6 +127,23 @@ export class RemixSite extends Construct {
       },
       priceClass: PriceClass.PRICE_CLASS_100,
     });
+
+    const bucket = new Bucket(this, "StaticAssetsBucket");
+
+    new BucketDeployment(this, "DeployStaticAssets", {
+      sources: [bundle],
+      destinationBucket: bucket,
+      destinationKeyPrefix: "_static",
+      distribution,
+      distributionPaths: ["/*"],
+    });
+
+    new CanaryDeployment(this, "canary", { lambda: fn });
+
+    const assetOrigin = new S3Origin(bucket);
+    const assetBehaviorOptions = {
+      viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+    };
 
     distribution.addBehavior("/_static/*", assetOrigin, assetBehaviorOptions);
 
