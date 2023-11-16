@@ -8,13 +8,13 @@ import {
 } from "@remix-run/react";
 import { json } from "@remix-run/node";
 
-// export const headers = {
-//   "Cache-Control": "max-age=604800, stale-while-revalidate=86400",
-// };
+export const headers = {
+  "Cache-Control": "max-age=0, stale-while-revalidate=60",
+};
 
 export function loader() {
   return json({
-    message: "Hello from loader v2",
+    message: "Hello from loader v3",
   });
 }
 
